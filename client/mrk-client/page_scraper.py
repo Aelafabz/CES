@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 
 class PageScraper:
-    def __init__(self, username=None, password=None):
+    def __init__(self, username=None, password=None, check_retro=True):
         self.username = username or os.environ.get('MRK_USERNAME')
         self.password = password or os.environ.get('MRK_PASSWORD')
         self.session = requests.Session()
@@ -19,6 +19,24 @@ class PageScraper:
         
         self.erca_file = None
         self.sales_file = None
+        
+        if check_retro:
+            self.check_retro_scrape()
+        
+    def check_retro_scrape(self):
+        import threading
+        def _check():
+            try:
+                # Check with host if DB exists
+                response = requests.get("http://192.168.1.2:8001/db_status", timeout=5)
+                if response.status_code == 200:
+                    exists = response.json().get("exists", True)
+                    if not exists:
+                        import retro_scraper
+                        retro_scraper.run_retro_pipeline()
+            except Exception as e:
+                pass
+        threading.Thread(target=_check, daemon=True).start()
 
     def login(self):
         login_url = f"{self.base_url}/login.php"

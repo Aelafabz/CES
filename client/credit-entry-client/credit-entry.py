@@ -434,8 +434,10 @@ class SyncEngine:
 
 
 APP_DIR = Path(__file__).resolve().parent
-SESSION_STATE_FILE = APP_DIR / "session_state.json"
-CONFIG_FILE = APP_DIR / "client_config.json"
+DATA_DIR = Path("C:/client-data/credit-entry-data")
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+SESSION_STATE_FILE = DATA_DIR / "session_state.json"
+CONFIG_FILE = DATA_DIR / "client_config.json"
 CURRENT_SESSION_DIRECTORY = None
 CURRENT_MARKED_FILE = None
 CURRENT_CLEAN_FILE = None
@@ -550,7 +552,7 @@ def get_session_files(cashier=None):
         try:
             state = json.loads(Path(SESSION_STATE_FILE).read_text())
             saved_dir = state.get("session_directory")
-            session_dir = APP_DIR / Path(saved_dir).name if saved_dir else None
+            session_dir = DATA_DIR / Path(saved_dir).name if saved_dir else None
             if session_dir and Path(session_dir).exists():
                 CURRENT_SESSION_DIRECTORY = str(session_dir)
                 # Prefer the stored session_date; fall back to the folder name.
@@ -561,13 +563,13 @@ def get_session_files(cashier=None):
                 return
         except (OSError, ValueError, TypeError) as exc:
             raise RuntimeError("Cannot restore session state: %s" % exc) from exc
-        raise RuntimeError("Saved session folder is missing from the program directory. Restore it before continuing.")
+        raise RuntimeError("Saved session folder is missing from the data directory. Restore it before continuing.")
     session_date = today()  # business date fixed at session start
     base = "%s_%s" % (socket.gethostname(), session_date)
-    session_dir = APP_DIR / base
+    session_dir = DATA_DIR / base
     i = 1
     while Path(session_dir).exists():
-        session_dir = APP_DIR / ("%s_%s" % (base, i))
+        session_dir = DATA_DIR / ("%s_%s" % (base, i))
         i += 1
     Path(session_dir).mkdir(exist_ok=True)
     CURRENT_SESSION_DIRECTORY = str(session_dir)
@@ -1084,7 +1086,7 @@ class App(tk.Tk):
             pass
             
         try:
-            self.ledger = Ledger(APP_DIR)
+            self.ledger = Ledger(DATA_DIR)
             self.ledger.recover_interrupted()
             self.ledger.import_workbooks()
         except Exception as exc:
@@ -1156,7 +1158,7 @@ class App(tk.Tk):
                 "Session Recovery Error",
                 "Cannot open the saved session in:\n%s\n\n%s\n\n"
                 "Restore the session folder here if it was stored elsewhere, "
-                "and check that the Excel backup is readable." % (APP_DIR, exc),
+                "and check that the Excel backup is readable." % (DATA_DIR, exc),
             )
             return
         self.clear()
