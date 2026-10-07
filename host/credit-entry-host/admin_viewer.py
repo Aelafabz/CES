@@ -11,11 +11,9 @@ from env_config import get_path, load_env_file
 
 load_env_file(PROJECT_ROOT / "host" / ".env")
 
-# Integrated Database Path
-INTEGRATED_DB_PATH = str(get_path("CES_DATABASE_PATH", os.path.join("database", "credit-entry.db"), PROJECT_ROOT))
 CLIENT_DATA_DIR = get_path("CRED_V6_CLIENT_DATA_DIR", "C:/client-data/credit-entry-data", PROJECT_ROOT)
-MARAKI_DB_PATH = INTEGRATED_DB_PATH
-CREDIT_DB_PATH = INTEGRATED_DB_PATH
+MARAKI_DB_PATH = str(get_path("MRK_DATABASE_PATH", "database/marak.db", PROJECT_ROOT))
+CREDIT_DB_PATH = str(get_path("CRED_V6_DATABASE_PATH", "database/credit_entry.db", PROJECT_ROOT))
 
 class DatabaseViewer:
     def __init__(self, parent, db_path, name):

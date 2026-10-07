@@ -4,7 +4,10 @@ from pathlib import Path
 from flask import Flask, request
 from werkzeug.utils import secure_filename
 import zipfile
-import db_builder
+import tempfile
+import threading
+import logging
+from package_watcher import configured_watcher
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -27,25 +30,35 @@ def upload_file():
         
     if file:
         filename = secure_filename(file.filename)
+        if not filename or not filename.lower().endswith('.zip'):
+            return "A ZIP package is required", 400
         filepath = os.path.join(UPLOAD_FOLDER, filename)
-        file.save(filepath)
-        
-        # Extract the package
-        extract_folder = os.path.join(UPLOAD_FOLDER, filename.replace('.zip', ''))
-        os.makedirs(extract_folder, exist_ok=True)
-        with zipfile.ZipFile(filepath, 'r') as zip_ref:
-            zip_ref.extractall(extract_folder)
-            
-        print(f"Received and extracted {filename}")
-        
-        db_builder.build_database_from_folder(extract_folder)
-        
-        return "File uploaded and extracted successfully", 200
+        descriptor, temporary = tempfile.mkstemp(prefix="upload-", suffix=".part", dir=UPLOAD_FOLDER)
+        os.close(descriptor)
+        try:
+            file.save(temporary)
+            if not zipfile.is_zipfile(temporary):
+                return "Invalid ZIP package", 400
+            # The watcher sees only completed uploads, never the in-progress file.
+            os.replace(temporary, filepath)
+        finally:
+            if os.path.exists(temporary):
+                os.unlink(temporary)
+        print(f"Received {filename}; queued for automatic database import")
+        return "File uploaded successfully; queued for database import", 200
 
 def start_receiver(port=None):
     host = os.environ.get("MRK_RECEIVER_HOST", "0.0.0.0")
     port = port or int(os.environ.get("MRK_RECEIVER_PORT", "8000"))
-    app.run(host=host, port=port)
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    watcher = configured_watcher()
+    worker = threading.Thread(target=watcher.run_forever, name="maraki-package-watcher", daemon=True)
+    worker.start()
+    try:
+        app.run(host=host, port=port, use_reloader=False)
+    finally:
+        watcher.stop.set()
+        worker.join(timeout=5)
 
 if __name__ == '__main__':
     start_receiver()

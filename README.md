@@ -36,10 +36,41 @@ A robust desktop application for logging and managing credit payments.
 
 ## Setup & Requirements
 
+For temporary scraping tests and database inspection, run
+`tools\scraping-dashboard\start-dashboard.cmd` and open `http://127.0.0.1:8790`.
+See [dashboard instructions](tools/scraping-dashboard/README.md).
+
+The `client` folder can be deployed independently to client machines. See
+[client deployment instructions](client/README.md) for local setup, launchers,
+configuration, and data migration. No project-root files or host code are needed.
+
 - Python 3.x
 - Dependencies: `requests`, `beautifulsoup4`, `Flask`, `openpyxl`, `werkzeug`
 
 ## Host and Client Environment
+
+The Maraki receiver automatically checks `MRK_UPLOAD_DIR` (default
+`host/mrk-host/received_packages`) every 10 seconds and runs the database builder
+for new or changed ZIP packages. This also handles packages copied into the folder
+manually. Upload responses acknowledge receipt; database import runs asynchronously.
+Packages must be unchanged across two scans before importing, so detection and
+import normally take up to 20 seconds. Invalid packages and failed database imports
+are retried each scan, with the error recorded in the session state.
+
+Tracking is saved atomically to `host/mrk-host/package_session_state.json`, including
+the last scan, file size/modification time, import status, attempts, SHA-256, and
+import timestamps. Successful unchanged packages are skipped across restarts.
+New sessions also process ZIPs already in the folder. Imports use `CES_DATABASE_PATH`
+and deduplicate existing rows. Existing extracted folders are ignored; each ZIP is
+extracted privately for import. All tables in a package must import successfully
+before the package is marked complete.
+
+The watcher starts with the MRK Receiver in the switchboard. To watch independently
+of the HTTP receiver, run `python host/mrk-host/db_builder.py` (or
+`python host/mrk-host/package_watcher.py`). A file lock prevents the standalone
+watcher and receiver from scanning concurrently. Change `MRK_PACKAGE_STATE_FILE`
+or `MRK_PACKAGE_SCAN_INTERVAL_SECONDS` in `host/.env` if needed. Restart the receiver
+after updating its code to enable its built-in watcher.
 
 Runtime paths, service addresses/ports, relay settings, and credentials are read from separate `host/.env` and `client/.env` files. Create them from `host/.env.example` and `client/.env.example`; both actual `.env` files are ignored by Git. The loader uses only Python's standard library. Values provided by the operating system override `.env` values.
 

@@ -17,13 +17,13 @@ from v6_common import BANKS, CASHIERS
 
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = Path(APP_DIR).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT))
+CLIENT_ROOT = Path(APP_DIR).resolve().parent
+sys.path.insert(0, str(CLIENT_ROOT))
 from env_config import load_env_file
 
-load_env_file(PROJECT_ROOT / "client" / ".env")
+load_env_file(CLIENT_ROOT / ".env")
 CONFIG_FILE = os.path.join(APP_DIR, "client_config.json")
-SESSION_STATE_FILE = "session_state.json"
+SESSION_STATE_FILE = os.path.join(APP_DIR, "session_state.json")
 HEADERS = ["ID", "Timestamp", "Cashier", "Bank", "Credit", "Status", "ServerEntryID", "SmsID"]
 RED_FILL = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
 CURRENT_SESSION_DIRECTORY = None

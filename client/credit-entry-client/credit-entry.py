@@ -434,12 +434,12 @@ class SyncEngine:
 
 
 APP_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = APP_DIR.parents[1]
-sys.path.insert(0, str(PROJECT_ROOT))
+CLIENT_ROOT = APP_DIR.parent
+sys.path.insert(0, str(CLIENT_ROOT))
 from env_config import get_path, load_env_file
 
-load_env_file(PROJECT_ROOT / "client" / ".env")
-DATA_DIR = get_path("CRED_V6_CLIENT_DATA_DIR", "C:/client-data/credit-entry-data", PROJECT_ROOT)
+load_env_file(CLIENT_ROOT / ".env")
+DATA_DIR = get_path("CRED_V6_CLIENT_DATA_DIR", "C:/client-data/credit-entry-data", CLIENT_ROOT)
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 SESSION_STATE_FILE = DATA_DIR / "session_state.json"
 CONFIG_FILE = DATA_DIR / "client_config.json"

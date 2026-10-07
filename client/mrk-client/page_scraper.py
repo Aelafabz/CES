@@ -6,11 +6,11 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT))
+CLIENT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(CLIENT_ROOT))
 from env_config import get_path, load_env_file
 
-load_env_file(PROJECT_ROOT / "client" / ".env")
+load_env_file(CLIENT_ROOT / ".env")
 
 class PageScraper:
     def __init__(self, username=None, password=None, check_retro=True):
@@ -22,7 +22,7 @@ class PageScraper:
         self.end_date = None
         
         current_month = datetime.now().strftime("%B_%Y")
-        data_root = get_path("MRK_DATA_DIR", "C:/Client-data/mrk-data", PROJECT_ROOT)
+        data_root = get_path("MRK_DATA_DIR", "C:/Client-data/mrk-data", CLIENT_ROOT)
         self.data_path = str(data_root / current_month)
         os.makedirs(self.data_path, exist_ok=True)
         

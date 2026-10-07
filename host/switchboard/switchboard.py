@@ -1,7 +1,7 @@
 """CES Host Switchboard.
 
 One window for the admin to see which host processes are running, whether
-they answer, how data is flowing through the shared database, and to switch
+they answer, how data is flowing through both databases, and to switch
 each process on or off at any time.
 
 Run:  python host/switchboard/switchboard.py
@@ -28,7 +28,8 @@ from env_config import get_path, load_env_file
 
 HOST_ENV_PATH = os.path.join(HOST_DIR, ".env")
 load_env_file(HOST_ENV_PATH)
-DB_PATH = str(get_path("CES_DATABASE_PATH", os.path.join("database", "credit-entry.db"), ROOT))
+CREDIT_DB_PATH = str(get_path("CRED_V6_DATABASE_PATH", "database/credit_entry.db", ROOT))
+MARAKI_DB_PATH = str(get_path("MRK_DATABASE_PATH", "database/marak.db", ROOT))
 LOG_DIR = str(get_path("CES_SWITCHBOARD_LOG_DIR", os.path.join("host", "switchboard", "logs"), ROOT))
 os.makedirs(LOG_DIR, exist_ok=True)
 
@@ -104,32 +105,35 @@ def probe(spec):
 
 def read_db_stats():
     """Read-only snapshot of table counts, newest timestamps and recent audit rows."""
-    stats = {"db_exists": os.path.exists(DB_PATH), "tables": {}, "audit": [], "unlogged_sms": None, "error": ""}
+    stats = {"db_exists": any(os.path.exists(p) for p in (CREDIT_DB_PATH, MARAKI_DB_PATH)), "tables": {}, "audit": [], "unlogged_sms": None, "error": ""}
     if not stats["db_exists"]:
         return stats
-    try:
-        conn = sqlite3.connect("file:%s?mode=ro" % DB_PATH.replace("\\", "/"), uri=True, timeout=5)
+    for db_path in (CREDIT_DB_PATH, MARAKI_DB_PATH):
+        if not os.path.exists(db_path):
+            continue
         try:
-            existing = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-            for label, table, ts_col in WATCHED:
-                if table not in existing:
-                    continue
-                count = conn.execute('SELECT COUNT(*) FROM "%s"' % table).fetchone()[0]
-                last = None
-                if ts_col:
-                    last = conn.execute('SELECT MAX("%s") FROM "%s"' % (ts_col, table)).fetchone()[0]
-                stats["tables"][table] = (count, last)
-            if "sms_payments" in existing:
-                stats["unlogged_sms"] = conn.execute(
-                    "SELECT COUNT(*) FROM sms_payments WHERE status='new'").fetchone()[0]
-            if "audit_log" in existing:
-                stats["audit"] = conn.execute(
-                    "SELECT id, created_at, event_type, actor, source_ip, details "
-                    "FROM audit_log ORDER BY id DESC LIMIT 60").fetchall()
-        finally:
-            conn.close()
-    except Exception as exc:
-        stats["error"] = str(exc)
+            conn = sqlite3.connect("file:%s?mode=ro" % db_path.replace("\\", "/"), uri=True, timeout=5)
+            try:
+                existing = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+                for label, table, ts_col in WATCHED:
+                    if table not in existing:
+                        continue
+                    count = conn.execute('SELECT COUNT(*) FROM "%s"' % table).fetchone()[0]
+                    last = None
+                    if ts_col:
+                        last = conn.execute('SELECT MAX("%s") FROM "%s"' % (ts_col, table)).fetchone()[0]
+                    stats["tables"][table] = (count, last)
+                if "sms_payments" in existing:
+                    stats["unlogged_sms"] = conn.execute(
+                        "SELECT COUNT(*) FROM sms_payments WHERE status='new'").fetchone()[0]
+                if "audit_log" in existing:
+                    stats["audit"] = conn.execute(
+                        "SELECT id, created_at, event_type, actor, source_ip, details "
+                        "FROM audit_log ORDER BY id DESC LIMIT 60").fetchall()
+            finally:
+                conn.close()
+        except Exception as exc:
+            stats["error"] += str(exc) + " "
     return stats
 
 
@@ -407,8 +411,8 @@ class Switchboard(tk.Tk):
             row["info"].config(text="  |  ".join(parts))
         self.render_log()
         up = sum(1 for m in self.managed if m.alive or m.external)
-        self.footer.config(text="%d of %d processes up  |  database: %s  |  refreshed %s" % (
-            up, len(self.managed), DB_PATH, datetime.now().strftime("%H:%M:%S")))
+        self.footer.config(text="%d of %d processes up  |  databases: %s, %s  |  refreshed %s" % (
+            up, len(self.managed), CREDIT_DB_PATH, MARAKI_DB_PATH, datetime.now().strftime("%H:%M:%S")))
 
     def render_flow(self, stats):
         for item in self.flow_tree.get_children():

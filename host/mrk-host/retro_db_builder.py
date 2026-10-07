@@ -43,7 +43,8 @@ def import_csv_to_db(db_path, csv_path, table_name):
 
 def build_database_from_folder(folder_path, db_path=None):
     if db_path is None:
-        db_path = str(get_path("CES_DATABASE_PATH", os.path.join("database", "credit-entry.db"), PROJECT_ROOT))
+        db_path = str(get_path("MRK_DATABASE_PATH", os.path.join("database", "marak.db"), PROJECT_ROOT))
+    Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     for filename in os.listdir(folder_path):
         if filename.endswith(".csv"):
             table_name = "retro_sales" if "sales" in filename.lower() else "retro_erca" if "erca" in filename.lower() else "retro_data"
