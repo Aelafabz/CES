@@ -3,3 +3,5 @@
 *.xml
 *.csv
 /database
+host/sms-relay-host/relay_config.json
+host/credit-entry-host/server_data/server_config.json

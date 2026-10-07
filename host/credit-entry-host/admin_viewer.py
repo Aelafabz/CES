@@ -2,9 +2,18 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import sqlite3
 import os
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
+from env_config import get_path, load_env_file
+
+load_env_file(PROJECT_ROOT / "host" / ".env")
 
 # Integrated Database Path
-INTEGRATED_DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'database', 'credit-entry.db')
+INTEGRATED_DB_PATH = str(get_path("CES_DATABASE_PATH", os.path.join("database", "credit-entry.db"), PROJECT_ROOT))
+CLIENT_DATA_DIR = get_path("CRED_V6_CLIENT_DATA_DIR", "C:/client-data/credit-entry-data", PROJECT_ROOT)
 MARAKI_DB_PATH = INTEGRATED_DB_PATH
 CREDIT_DB_PATH = INTEGRATED_DB_PATH
 
@@ -132,7 +141,7 @@ class AdminViewerApp(tk.Tk):
         
         # In case the user is running the client and host on the same machine, 
         # try the client db path if the host one doesn't exist
-        fallback_credit_path = "C:/client-data/credit-entry-data/transactions.sqlite3"
+        fallback_credit_path = str(CLIENT_DATA_DIR / "transactions.sqlite3")
         credit_path = CREDIT_DB_PATH
         if not os.path.exists(credit_path) and os.path.exists(fallback_credit_path):
             credit_path = fallback_credit_path

@@ -434,7 +434,12 @@ class SyncEngine:
 
 
 APP_DIR = Path(__file__).resolve().parent
-DATA_DIR = Path("C:/client-data/credit-entry-data")
+PROJECT_ROOT = APP_DIR.parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
+from env_config import get_path, load_env_file
+
+load_env_file(PROJECT_ROOT / "client" / ".env")
+DATA_DIR = get_path("CRED_V6_CLIENT_DATA_DIR", "C:/client-data/credit-entry-data", PROJECT_ROOT)
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 SESSION_STATE_FILE = DATA_DIR / "session_state.json"
 CONFIG_FILE = DATA_DIR / "client_config.json"
@@ -446,12 +451,15 @@ CURRENT_SESSION_DATE = None  # business date = date the session started (survive
 
 def load_config():
     if not os.path.exists(CONFIG_FILE):
-        cfg = {"server_url": "http://192.168.1.153:8765"}
-        save_config(cfg)
-        return cfg
-    with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-        cfg = json.load(f)
+        cfg = {}
+    else:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            cfg = json.load(f)
     cfg.setdefault("server_url", "http://127.0.0.1:8765")
+    if os.environ.get("CRED_V6_SERVER_URL"):
+        cfg["server_url"] = os.environ["CRED_V6_SERVER_URL"]
+    if os.environ.get("CRED_V6_CLIENT_TOKEN"):
+        cfg["client_token"] = os.environ["CRED_V6_CLIENT_TOKEN"]
     return cfg
 
 

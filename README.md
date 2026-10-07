@@ -32,8 +32,17 @@ A robust desktop application for logging and managing credit payments.
 - The host relay polls an Android phone's inbox through ADB and forwards recognized mobile payments to the credit-entry server.
 - To exercise SMS parsing and posting without a connected phone or writing to the live server, run `python host/sms-relay-host/sms_adb_relay.py --test-fake`. The test sends generated messages to a temporary local receiver.
 - To continuously insert clearly labeled fake payments into the configured credit-entry server database, run `python host/sms-relay-host/sms_adb_relay.py --fake-stream`. It sends one fake payment every 5-10 seconds until stopped with Ctrl+C. These entries are test data and will appear in the credit-entry client.
+- The host switchboard also has a separate **Faux SMS Generator** ON/OFF control for starting and stopping that stream.
 
 ## Setup & Requirements
 
 - Python 3.x
 - Dependencies: `requests`, `beautifulsoup4`, `Flask`, `openpyxl`, `werkzeug`
+
+## Host and Client Environment
+
+Runtime paths, service addresses/ports, relay settings, and credentials are read from separate `host/.env` and `client/.env` files. Create them from `host/.env.example` and `client/.env.example`; both actual `.env` files are ignored by Git. The loader uses only Python's standard library. Values provided by the operating system override `.env` values.
+
+On Windows, create the files with `Copy-Item host\.env.example host\.env` and `Copy-Item client\.env.example client\.env`, then edit the values for the local network and directories.
+
+The credit-entry server creates missing API tokens in `host/.env` on first startup and no longer prints them to the console. If API authentication is enabled, copy `CRED_V6_CLIENT_TOKEN` from `host/.env` to `client/.env`; the relay reads `CRED_V6_RELAY_TOKEN` directly from `host/.env`. Restart the relevant application after editing its `.env`. Keep credentials private and do not commit actual `.env` files.

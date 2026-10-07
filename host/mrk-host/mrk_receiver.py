@@ -1,11 +1,20 @@
 import os
+import sys
+from pathlib import Path
 from flask import Flask, request
 from werkzeug.utils import secure_filename
 import zipfile
 import db_builder
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
+from env_config import get_path, load_env_file
+
+load_env_file(PROJECT_ROOT / "host" / ".env")
+
 app = Flask(__name__)
-UPLOAD_FOLDER = 'received_packages'
+UPLOAD_FOLDER = str(get_path(
+    "MRK_UPLOAD_DIR", os.path.join("host", "mrk-host", "received_packages"), PROJECT_ROOT))
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @app.route('/upload', methods=['POST'])
@@ -33,8 +42,10 @@ def upload_file():
         
         return "File uploaded and extracted successfully", 200
 
-def start_receiver(port=8000):
-    app.run(host='0.0.0.0', port=port)
+def start_receiver(port=None):
+    host = os.environ.get("MRK_RECEIVER_HOST", "0.0.0.0")
+    port = port or int(os.environ.get("MRK_RECEIVER_PORT", "8000"))
+    app.run(host=host, port=port)
 
 if __name__ == '__main__':
     start_receiver()

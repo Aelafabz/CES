@@ -22,12 +22,23 @@ from v6_common import BANKS, CASHIERS, TARGET_SMS_SENDERS, normalize_cashier, pa
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(APP_DIR, '..', '..'))
-DATA_DIR = os.environ.get("CRED_V6_DATA", os.path.join(APP_DIR, "server_data"))
-DB_PATH = os.path.join(PROJECT_ROOT, "database", "credit-entry.db")
+sys.path.insert(0, PROJECT_ROOT)
+from env_config import get_path, load_env_file, save_env_values
+
+HOST_ENV_PATH = os.path.join(PROJECT_ROOT, "host", ".env")
+load_env_file(HOST_ENV_PATH)
+DATA_DIR = os.environ.get("CRED_V6_DATA") or str(
+    get_path("CRED_V6_DATA_DIR", os.path.join("host", "credit-entry-host", "server_data"), PROJECT_ROOT))
+DB_PATH = str(get_path("CES_DATABASE_PATH", os.path.join("database", "credit-entry.db"), PROJECT_ROOT))
 CONFIG_PATH = os.path.join(DATA_DIR, "server_config.json")
 XML_DIR = os.path.join(DATA_DIR, "received_xmls")
 HOST = os.environ.get("CRED_V6_HOST", "0.0.0.0")
 PORT = int(os.environ.get("CRED_V6_PORT", "8765"))
+TOKEN_ENV_KEYS = {
+    "client_token": "CRED_V6_CLIENT_TOKEN",
+    "relay_token": "CRED_V6_RELAY_TOKEN",
+    "admin_token": "CRED_V6_ADMIN_TOKEN",
+}
 XML_PUBLIC_COLUMNS = """
     id, sha256, filename, saved_path, source_ip, cashier_name, reference_number,
     invoice_date, invoice_type, payment_type, customer_name, total_amount, root_tag,
@@ -50,27 +61,35 @@ def ensure_dirs():
 
 def load_config():
     ensure_dirs()
-    if not os.path.exists(CONFIG_PATH):
+    if os.path.exists(CONFIG_PATH):
+        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+            config = json.load(f)
+    else:
         config = {
             "auth_required": False,
             "ip_allowlist_enabled": False,
-            "client_token": secrets.token_hex(24),
-            "relay_token": secrets.token_hex(24),
-            "admin_token": secrets.token_hex(32),
             "keep_xml_files": False,
             "cashiers": CASHIERS,
             "banks": BANKS,
-            "allowed_cashier_ips": ["192.168.1.0/24", "127.0.0.1", "::1"],
+            "allowed_cashier_ips": [
+                value.strip() for value in os.environ.get(
+                    "CRED_V6_ALLOWED_CASHIER_IPS", "192.168.1.0/24,127.0.0.1,::1").split(",")
+                if value.strip()
+            ],
         }
-        save_config(config)
-        return config
-    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-        config = json.load(f)
+    migrated_tokens = {}
+    for key, env_key in TOKEN_ENV_KEYS.items():
+        token = os.environ.get(env_key) or config.get(key)
+        if not token:
+            token = secrets.token_hex(32 if key == "admin_token" else 24)
+        config[key] = token
+        if os.environ.get(env_key) != token:
+            migrated_tokens[env_key] = token
+    if migrated_tokens:
+        save_env_values(HOST_ENV_PATH, migrated_tokens)
     config.setdefault("auth_required", False)
     config.setdefault("ip_allowlist_enabled", False)
     config.setdefault("keep_xml_files", False)
-    for key in ("client_token", "relay_token", "admin_token"):
-        config.setdefault(key, secrets.token_hex(24))
     config.setdefault("cashiers", CASHIERS)
     config.setdefault("banks", BANKS)
     config.setdefault("allowed_cashier_ips", ["192.168.1.0/24", "127.0.0.1", "::1"])
@@ -84,8 +103,9 @@ def load_config():
 def save_config(config):
     ensure_dirs()
     temp = CONFIG_PATH + ".tmp"
+    persisted = {key: value for key, value in config.items() if key not in TOKEN_ENV_KEYS}
     with open(temp, "w", encoding="utf-8") as f:
-        json.dump(config, f, indent=2, sort_keys=True)
+        json.dump(persisted, f, indent=2, sort_keys=True)
     os.replace(temp, CONFIG_PATH)
 
 
@@ -739,14 +759,14 @@ class Handler(BaseHTTPRequestHandler):
                 require_token(self, "client")
                 payload = parse_json(self)
                 res = create_entry(payload, ip)
-                send_json(self, 201, res)
+                send_json(self, 201, {"entry": res})
             elif path == "/api/entries/reverse":
                 require_token(self, "client")
                 payload = parse_json(self)
                 res = reverse_entry(payload, ip)
-                send_json(self, 200, res)
-            elif path == "/api/admin/cashiers":
-                require_token(self, "admin")
+                send_json(self, 200, {"entry": res})
+            elif path == "/api/cashiers":
+                require_token(self, "client")
                 payload = parse_json(self)
                 res = add_cashier(self, payload)
                 send_json(self, 200, res)
@@ -773,9 +793,7 @@ def main():
     print("Cred Entry v6 server listening on http://%s:%s" % (HOST, PORT))
     print("Config: %s" % CONFIG_PATH)
     if server.config.get("auth_required", False):
-        print("Client token: %s" % server.config["client_token"])
-        print("Relay token:  %s" % server.config["relay_token"])
-        print("Admin token:  %s" % server.config["admin_token"])
+        print("Authentication enabled; tokens are loaded from host/.env.")
     else:
         print("Auth disabled for LAN testing.")
     server.serve_forever()

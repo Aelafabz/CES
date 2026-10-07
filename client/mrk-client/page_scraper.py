@@ -1,20 +1,29 @@
 import os
+import sys
+from pathlib import Path
 import time
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
+from env_config import get_path, load_env_file
+
+load_env_file(PROJECT_ROOT / "client" / ".env")
 
 class PageScraper:
     def __init__(self, username=None, password=None, check_retro=True):
         self.username = username or os.environ.get('MRK_USERNAME')
         self.password = password or os.environ.get('MRK_PASSWORD')
         self.session = requests.Session()
-        self.base_url = "http://192.168.1.24/MarakiReports2012"
+        self.base_url = os.environ.get("MRK_BASE_URL", "http://192.168.1.24/MarakiReports2012").rstrip("/")
         self.start_date = None
         self.end_date = None
         
         current_month = datetime.now().strftime("%B_%Y")
-        self.data_path = f"C:/Client-data/mrk-data/{current_month}/"
+        data_root = get_path("MRK_DATA_DIR", "C:/Client-data/mrk-data", PROJECT_ROOT)
+        self.data_path = str(data_root / current_month)
         os.makedirs(self.data_path, exist_ok=True)
         
         self.erca_file = None
@@ -28,7 +37,9 @@ class PageScraper:
         def _check():
             try:
                 # Check with host if DB exists
-                response = requests.get("http://192.168.1.2:8001/db_status", timeout=5)
+                host = os.environ.get("MRK_RETRO_RECEIVER_HOST", "192.168.1.2")
+                port = os.environ.get("MRK_RETRO_RECEIVER_PORT", "8001")
+                response = requests.get(f"http://{host}:{port}/db_status", timeout=5)
                 if response.status_code == 200:
                     exists = response.json().get("exists", True)
                     if not exists:

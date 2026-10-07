@@ -1,6 +1,14 @@
 import os
 import sqlite3
 import csv
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
+from env_config import get_path, load_env_file
+
+load_env_file(PROJECT_ROOT / "host" / ".env")
 
 def create_table_from_headers(cursor, table_name, headers):
     sanitized = [h.replace(' ', '_').replace('?', '').replace('/', '_').replace('-', '_').replace('#', 'Num') for h in headers]
@@ -33,7 +41,9 @@ def import_csv_to_db(db_path, csv_path, table_name):
     conn.commit()
     conn.close()
 
-def build_database_from_folder(folder_path, db_path=os.path.join(os.path.dirname(__file__), '..', '..', 'database', 'credit-entry.db')):
+def build_database_from_folder(folder_path, db_path=None):
+    if db_path is None:
+        db_path = str(get_path("CES_DATABASE_PATH", os.path.join("database", "credit-entry.db"), PROJECT_ROOT))
     for filename in os.listdir(folder_path):
         if filename.endswith(".csv"):
             table_name = "retro_sales" if "sales" in filename.lower() else "retro_erca" if "erca" in filename.lower() else "retro_data"

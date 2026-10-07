@@ -8,6 +8,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk
+import sys
 
 import openpyxl
 from openpyxl.styles import PatternFill
@@ -16,6 +17,11 @@ from v6_common import BANKS, CASHIERS
 
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = Path(APP_DIR).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
+from env_config import load_env_file
+
+load_env_file(PROJECT_ROOT / "client" / ".env")
 CONFIG_FILE = os.path.join(APP_DIR, "client_config.json")
 SESSION_STATE_FILE = "session_state.json"
 HEADERS = ["ID", "Timestamp", "Cashier", "Bank", "Credit", "Status", "ServerEntryID", "SmsID"]
@@ -27,13 +33,16 @@ CURRENT_SESSION_DATE = None  # business date = date the session started (survive
 
 
 def load_config():
-    if not os.path.exists(CONFIG_FILE):
-        cfg = {"server_url": "http://127.0.0.1:8765"}
-        save_config(cfg)
-        return cfg
-    with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-        cfg = json.load(f)
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            cfg = json.load(f)
+    else:
+        cfg = {}
     cfg.setdefault("server_url", "http://127.0.0.1:8765")
+    if os.environ.get("CRED_V6_SERVER_URL"):
+        cfg["server_url"] = os.environ["CRED_V6_SERVER_URL"]
+    if os.environ.get("CRED_V6_CLIENT_TOKEN"):
+        cfg["client_token"] = os.environ["CRED_V6_CLIENT_TOKEN"]
     return cfg
 
 

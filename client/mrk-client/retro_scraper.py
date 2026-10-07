@@ -2,14 +2,26 @@ import os
 import json
 import socket
 import requests
+import sys
+from pathlib import Path
 from datetime import datetime
 from page_scraper import PageScraper
 from data_organizer import DataOrganizer
 import zipfile
 
-STATE_FILE = "C:/Client-data/mrk-data/retro_state.json"
-HOST_STATUS_URL = "http://192.168.1.2:8001/db_status"
-HOST_UPLOAD_URL = "http://192.168.1.2:8001/upload_retro"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
+from env_config import get_path, load_env_file
+
+load_env_file(PROJECT_ROOT / "client" / ".env")
+
+STATE_FILE = get_path(
+    "MRK_RETRO_STATE_FILE", "C:/Client-data/mrk-data/retro_state.json", PROJECT_ROOT)
+RETRO_DATA_DIR = get_path("MRK_RETRO_DATA_DIR", "C:/Client-data/mrk-data", PROJECT_ROOT)
+RETRO_HOST = os.environ.get("MRK_RETRO_RECEIVER_HOST", "192.168.1.2")
+RETRO_PORT = os.environ.get("MRK_RETRO_RECEIVER_PORT", "8001")
+HOST_STATUS_URL = f"http://{RETRO_HOST}:{RETRO_PORT}/db_status"
+HOST_UPLOAD_URL = f"http://{RETRO_HOST}:{RETRO_PORT}/upload_retro"
 
 def get_state():
     if os.path.exists(STATE_FILE):
@@ -18,7 +30,7 @@ def get_state():
     return {"current_offset": 1, "last_run": None}
 
 def save_state(state):
-    os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
+    os.makedirs(STATE_FILE.parent, exist_ok=True)
     with open(STATE_FILE, "w") as f:
         json.dump(state, f)
 
@@ -43,7 +55,7 @@ def run_retro_pipeline():
     end_date = f"{target_year}-12-31"
     
     scraper = PageScraper(check_retro=False)
-    scraper.data_path = f"C:/Client-data/mrk-data/retro_{target_year}/"
+    scraper.data_path = str(RETRO_DATA_DIR / f"retro_{target_year}")
     os.makedirs(scraper.data_path, exist_ok=True)
     
     print(f"Scraping data for {target_year}...")

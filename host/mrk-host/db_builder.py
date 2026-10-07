@@ -1,6 +1,14 @@
 import os
 import sqlite3
 import csv
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
+from env_config import get_path, load_env_file
+
+load_env_file(PROJECT_ROOT / "host" / ".env")
 
 def create_table_from_headers(cursor, table_name, headers):
     # Sanitize headers for SQL columns
@@ -10,7 +18,9 @@ def create_table_from_headers(cursor, table_name, headers):
     return sanitized
 
 def import_csv_to_db(db_path, csv_path, table_name):
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=30)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=30000")
     cursor = conn.cursor()
     
     with open(csv_path, 'r', encoding='utf-8') as f:
@@ -21,9 +31,12 @@ def import_csv_to_db(db_path, csv_path, table_name):
             return
             
         sanitized_headers = create_table_from_headers(cursor, table_name, headers)
+        columns = ", ".join([f'"{col}" TEXT' for col in sanitized_headers])
+        
+        cursor.execute(f"CREATE TEMP TABLE tmp_{table_name} ({columns})")
         
         placeholders = ", ".join(["?" for _ in sanitized_headers])
-        insert_sql = f"INSERT INTO {table_name} VALUES ({placeholders})"
+        insert_sql = f"INSERT INTO tmp_{table_name} VALUES ({placeholders})"
         
         for row in reader:
             # Pad row if missing columns
@@ -33,12 +46,15 @@ def import_csv_to_db(db_path, csv_path, table_name):
             row = row[:len(sanitized_headers)]
             cursor.execute(insert_sql, row)
             
+        cursor.execute(f"INSERT INTO {table_name} SELECT * FROM tmp_{table_name} EXCEPT SELECT * FROM {table_name}")
+        cursor.execute(f"DROP TABLE tmp_{table_name}")
+            
     conn.commit()
     conn.close()
 
 def build_database_from_folder(folder_path, db_path=None):
     if db_path is None:
-        db_path = os.path.join(os.path.dirname(__file__), '..', '..', 'database', 'credit-entry.db')
+        db_path = str(get_path("CES_DATABASE_PATH", os.path.join("database", "credit-entry.db"), PROJECT_ROOT))
     
     for filename in os.listdir(folder_path):
         if filename.endswith(".csv"):

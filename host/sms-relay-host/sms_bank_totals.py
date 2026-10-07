@@ -18,6 +18,11 @@ from v6_common import TARGET_SMS_SENDERS, parse_datetime_text, parse_sms_payment
 
 ETHIOPIA = timezone(timedelta(hours=3))
 APP_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = APP_DIR.parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
+from env_config import get_path, load_env_file
+
+load_env_file(PROJECT_ROOT / "host" / ".env")
 SUPPORTED_BANKS = ("Awash", "Bank of Abyssinia", "CBE", "Telebirr")
 
 
@@ -160,9 +165,12 @@ def load_rows(args):
         with open(args.input, encoding="utf-8") as handle:
             return json.load(handle)
     cfg = {}
-    config = APP_DIR / "relay_config.json"
+    config = get_path(
+        "SMS_RELAY_CONFIG_FILE", Path("host") / "sms-relay-host" / "relay_config.json", PROJECT_ROOT)
     if config.exists():
         cfg = json.loads(config.read_text(encoding="utf-8"))
+    if os.environ.get("SMS_RELAY_ADB_PATH"):
+        cfg["adb_path"] = os.environ["SMS_RELAY_ADB_PATH"]
     if args.adb_path:
         cfg["adb_path"] = args.adb_path
     return read_phone(cfg)

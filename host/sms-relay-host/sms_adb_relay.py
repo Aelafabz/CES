@@ -17,8 +17,16 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 from v6_common import parse_sms_payment, TARGET_SMS_SENDERS
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-RELAY_CONFIG_PATH = os.path.join(APP_DIR, "relay_config.json")
-RELAY_STATE_PATH = os.path.join(APP_DIR, "relay_state.json")
+PROJECT_ROOT = os.path.abspath(os.path.join(APP_DIR, "..", ".."))
+sys.path.insert(0, PROJECT_ROOT)
+from env_config import get_path, load_env_file
+
+HOST_ENV_PATH = os.path.join(PROJECT_ROOT, "host", ".env")
+load_env_file(HOST_ENV_PATH)
+RELAY_CONFIG_PATH = str(get_path(
+    "SMS_RELAY_CONFIG_FILE", os.path.join("host", "sms-relay-host", "relay_config.json"), PROJECT_ROOT))
+RELAY_STATE_PATH = str(get_path(
+    "SMS_RELAY_STATE_FILE", os.path.join("host", "sms-relay-host", "relay_state.json"), PROJECT_ROOT))
 
 def load_relay_config():
     cfg = {
@@ -35,7 +43,16 @@ def load_relay_config():
             with open(RELAY_CONFIG_PATH, "r", encoding="utf-8") as f:
                 cfg.update(json.load(f))
         except ValueError as exc:
-            pass
+            raise RuntimeError(f"Invalid relay configuration in {RELAY_CONFIG_PATH}: {exc}") from exc
+    cfg.update({
+        "adb_path": os.environ.get("SMS_RELAY_ADB_PATH", cfg["adb_path"]),
+        "poll_interval_seconds": float(os.environ.get(
+            "SMS_RELAY_POLL_INTERVAL_SECONDS", cfg["poll_interval_seconds"])),
+        "server_url": os.environ.get("SMS_RELAY_SERVER_URL", cfg["server_url"]),
+        "relay_token": os.environ.get("CRED_V6_RELAY_TOKEN", cfg["relay_token"]),
+        "target_senders": [sender.strip() for sender in os.environ.get(
+            "SMS_RELAY_TARGET_SENDERS", ",".join(cfg["target_senders"])).split(",") if sender.strip()],
+    })
     return cfg
 
 def load_relay_state():

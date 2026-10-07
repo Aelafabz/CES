@@ -2,6 +2,14 @@ import os
 import zipfile
 import requests
 import socket
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
+from env_config import load_env_file
+
+load_env_file(PROJECT_ROOT / "client" / ".env")
 
 class MRKSender:
     def __init__(self, sales_csv, erca_csv, start_date, end_date):
@@ -9,8 +17,8 @@ class MRKSender:
         self.erca_csv = erca_csv
         self.start_date = start_date
         self.end_date = end_date
-        self.receiver_ip = "192.168.1.2"
-        self.receiver_port = 8000
+        self.receiver_ip = os.environ.get("MRK_RECEIVER_HOST", "192.168.1.2")
+        self.receiver_port = int(os.environ.get("MRK_RECEIVER_PORT", "8000"))
         
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
