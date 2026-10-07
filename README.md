@@ -49,6 +49,18 @@ configuration, and data migration. No project-root files or host code are needed
 
 ## Host and Client Environment
 
+Host data is split into `database/marak.db` for Maraki report tables and
+`database/credit_entry.db` for credit entries, SMS payments, XML records, and audit
+events. Configure these through `MRK_DATABASE_PATH` and `CRED_V6_DATABASE_PATH`
+in `host/.env`. The old `CES_DATABASE_PATH` setting is no longer used.
+The switchboard monitors both databases; the scraping dashboard inspects Maraki.
+
+To migrate a legacy shared database, stop its writers and run
+`python tools/split_database.py --apply-config`. The migration makes a full SQLite
+backup in `database/backups`, preserves table schemas and identifiers, checks row
+counts and database integrity, and refuses to overwrite existing destination files.
+Restart the host services after migration.
+
 The Maraki receiver automatically checks `MRK_UPLOAD_DIR` (default
 `host/mrk-host/received_packages`) every 10 seconds and runs the database builder
 for new or changed ZIP packages. This also handles packages copied into the folder
@@ -60,7 +72,7 @@ are retried each scan, with the error recorded in the session state.
 Tracking is saved atomically to `host/mrk-host/package_session_state.json`, including
 the last scan, file size/modification time, import status, attempts, SHA-256, and
 import timestamps. Successful unchanged packages are skipped across restarts.
-New sessions also process ZIPs already in the folder. Imports use `CES_DATABASE_PATH`
+New sessions also process ZIPs already in the folder. Imports use `MRK_DATABASE_PATH`
 and deduplicate existing rows. Existing extracted folders are ignored; each ZIP is
 extracted privately for import. All tables in a package must import successfully
 before the package is marked complete.

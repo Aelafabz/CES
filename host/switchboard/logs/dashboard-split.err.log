@@ -1,0 +1,25 @@
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:8790
+Press CTRL+C to quit
+127.0.0.1 - - [07/Oct/2026 13:39:19] "GET /api/status HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 13:39:19] "GET /api/status HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 13:39:30] "GET /api/database?db=host HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 13:39:41] "GET /api/status HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 13:39:41] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 13:39:41] "GET /api/status HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 13:39:41] "GET /api/database?db=test&page=0&search= HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 13:39:41] "GET /api/database?db=host&page=0&search= HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 13:39:42] "GET /api/status HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 13:39:43] "GET /api/status HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 13:39:45] "GET /api/status HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 13:39:46] "GET /api/status HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 13:39:47] "GET /api/status HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 13:39:48] "GET /api/status HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 13:39:49] "GET /api/status HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 13:39:51] "GET /api/status HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 13:39:52] "GET /api/status HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 13:39:53] "GET /api/status HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 13:39:54] "GET /api/status HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 13:39:55] "GET /api/status HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 13:39:57] "GET /api/status HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 13:39:58] "GET /api/status HTTP/1.1" 200 -

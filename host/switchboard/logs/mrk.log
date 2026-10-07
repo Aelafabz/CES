@@ -52,3 +52,4 @@ Imported 2026-10-01_2026-10-07_sales.csv into table sales
  * Running on http://127.0.0.1:8000
  * Running on http://192.168.1.2:8000
 2026-10-07 13:26:18,505 INFO [33mPress CTRL+C to quit[0m
+=== Stopped 2026-10-07T13:37:25 ===

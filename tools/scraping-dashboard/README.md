@@ -23,9 +23,9 @@ Downloads include HTML, CSV, and the packaged ZIP. The sample contains three
 rows in each report; identical rows within an import are deduplicated by the
 existing host importer. Sample rows are labeled TEST.
 
-The existing host database defaults to `CES_DATABASE_PATH` from `host/.env`,
-currently `database/credit-entry.db`. Maraki's `sales`, `erca`, and historical
-tables live there alongside credit-entry tables. To inspect a different
+The existing host database defaults to `MRK_DATABASE_PATH` from `host/.env`,
+currently `database/marak.db`. Maraki's `sales`, `erca`, and historical
+tables live there; credit-entry data uses `database/credit_entry.db`. To inspect a different
 `maraki_db` file, pass `--database C:\path\to\maraki_db.sqlite` at startup.
 The viewer opens both databases in SQLite read-only mode and supports table
 counts, text search, and pages of 50 rows.
