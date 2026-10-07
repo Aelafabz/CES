@@ -2,9 +2,15 @@ import sys
 import os
 import json
 import time
+import argparse
+import random
 import subprocess
+import threading
+import uuid
 import urllib.request
 import urllib.error
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from datetime import datetime
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'client', 'credit-entry-client')))
 
@@ -67,13 +73,10 @@ def parse_content_rows(output):
         records.append("\n".join(current))
     return records
 
-def read_new_messages(cfg, last_seen):
-    last_seen = last_seen or 0
-    query = f"content query --uri content://sms/inbox --projection _id:address:body --where \"_id > {last_seen}\" --sort \"_id ASC\""
-    output = adb_shell(cfg, query)
+def parse_message_output(cfg, output):
     if "No result found." in output:
         return []
-    
+
     rows = parse_content_rows(output)
     results = []
     for row_text in rows:
@@ -93,6 +96,11 @@ def read_new_messages(cfg, last_seen):
                 results.append((msg_id, None))
     return results
 
+def read_new_messages(cfg, last_seen):
+    last_seen = last_seen or 0
+    query = f"content query --uri content://sms/inbox --projection _id:address:body --where \"_id > {last_seen}\" --sort \"_id ASC\""
+    return parse_message_output(cfg, adb_shell(cfg, query))
+
 def post_sms(cfg, payment):
     url = cfg["server_url"].rstrip('/') + "/api/relay/sms"
     data = json.dumps(payment).encode('utf-8')
@@ -104,7 +112,125 @@ def post_sms(cfg, payment):
     with urllib.request.urlopen(req, timeout=10) as response:
         return response.getcode() == 201
 
+def generate_fake_sms_input():
+    messages = [
+        (101, "127", "Received ETB 1,250.50 from Alice Example on 07/10/2026 at 08:30:00"),
+        (102, "CBE", "You received ETB 300.00 from account 100000 (Bob Example)."),
+        (103, "Unknown Sender", "This message should not be relayed."),
+    ]
+    return "\n".join(
+        f"Row: {index} _id={msg_id}, address={sender}, body={body}"
+        for index, (msg_id, sender, body) in enumerate(messages)
+    )
+
+
+def generate_fake_sms_payment(cfg, sequence):
+    timestamp = datetime.now().strftime("%d/%m/%Y at %H:%M:%S")
+    if sequence % 2:
+        sender = "127"
+        body = f"Received ETB 1,250.50 from FAKE TEST Alice on {timestamp}"
+    else:
+        sender = "CBE"
+        body = "You received ETB 300.00 from account 100000 (FAKE TEST Bob)."
+    msg_id = time.time_ns()
+    output = f"Row: 0 _id={msg_id}, address={sender}, body={body}"
+    messages = parse_message_output(cfg, output)
+    payment = next((item for _, item in messages if item is not None), None)
+    if payment is None:
+        raise RuntimeError(f"Generated fake SMS from {sender} was not recognized.")
+    payment["external_id"] = f"fake-stream-{uuid.uuid4().hex}"
+    payment["body"] = "[FAKE TEST SMS] " + payment["body"]
+    payment["display_text"] = "[FAKE TEST] " + payment["display_text"]
+    return payment
+
+
+class _FakeRelayHandler(BaseHTTPRequestHandler):
+    received = []
+
+    def do_POST(self):
+        body = self.rfile.read(int(self.headers["Content-Length"]))
+        self.received.append((self.path, self.headers.get("X-Cred-Token"), json.loads(body)))
+        self.send_response(201)
+        self.end_headers()
+
+    def log_message(self, format, *args):
+        pass
+
+
+def test_sms_adb_relay():
+    """Exercise SMS parsing and posting against a temporary local receiver."""
+    _FakeRelayHandler.received.clear()
+    server = HTTPServer(("127.0.0.1", 0), _FakeRelayHandler)
+    server_thread = threading.Thread(target=server.serve_forever, daemon=True)
+    server_thread.start()
+    cfg = {
+        "target_senders": ["127", "CBE"],
+        "server_url": f"http://127.0.0.1:{server.server_port}",
+        "relay_token": "fake-test-token",
+    }
+    try:
+        messages = parse_message_output(cfg, generate_fake_sms_input())
+        if [msg_id for msg_id, _ in messages] != [101, 102, 103]:
+            raise AssertionError("Fake SMS input was not parsed as expected.")
+        for _, payment in messages:
+            if payment is not None and not post_sms(cfg, payment):
+                raise RuntimeError("Local fake SMS receiver did not accept the payment.")
+        if len(_FakeRelayHandler.received) != 2:
+            raise AssertionError("Expected exactly two supported payments at the local receiver.")
+        if any(path != "/api/relay/sms" for path, _, _ in _FakeRelayHandler.received):
+            raise AssertionError("Fake payment was posted to an unexpected endpoint.")
+        if any(token != "fake-test-token" for _, token, _ in _FakeRelayHandler.received):
+            raise AssertionError("Relay token was not sent to the local fake receiver.")
+        print("Fake SMS relay passed: 2 payments parsed and posted to a temporary local receiver; no phone or live server used.")
+        return _FakeRelayHandler.received
+    finally:
+        server.shutdown()
+        server.server_close()
+        server_thread.join()
+
+
+def run_fake_sms_stream(cfg=None, stop_event=None, interval_range=(5.0, 10.0)):
+    """Continuously post visibly marked fake payments to the configured server."""
+    cfg = cfg or load_relay_config()
+    stop_event = stop_event or threading.Event()
+    sequence = 0
+    print(f"Streaming fake SMS to {cfg['server_url']} every 5-10 seconds; press Ctrl+C to stop.")
+    while not stop_event.is_set():
+        sequence += 1
+        payment = generate_fake_sms_payment(cfg, sequence)
+        try:
+            if not post_sms(cfg, payment):
+                raise RuntimeError("Server did not accept the fake SMS.")
+            print(f"Posted {payment['channel']} fake SMS {payment['external_id']}")
+        except Exception as exc:
+            print(f"Failed to post fake SMS: {exc}")
+        if stop_event.wait(random.uniform(*interval_range)):
+            break
+
+
 def main():
+    parser = argparse.ArgumentParser(description="Relay incoming SMS payments.")
+    parser.add_argument(
+        "--test-fake",
+        action="store_true",
+        help="run the parser and HTTP relay against generated SMS and a temporary local receiver",
+    )
+    parser.add_argument(
+        "--fake-stream",
+        action="store_true",
+        help="continuously post visibly marked fake payments to the configured server every 5-10 seconds",
+    )
+    args = parser.parse_args()
+    if args.test_fake:
+        test_sms_adb_relay()
+        return
+    if args.fake_stream:
+        try:
+            run_fake_sms_stream()
+        except KeyboardInterrupt:
+            print("\nFake SMS stream stopped.")
+        return
+
     print("Starting standalone SMS ADB Relay...")
     cfg = load_relay_config()
     last_seen = load_relay_state()

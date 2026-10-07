@@ -3,9 +3,10 @@ from tkinter import ttk, messagebox
 import sqlite3
 import os
 
-# Default Database Paths (can be updated by the user)
-MARAKI_DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'mrk-host', 'maraki-db.db')
-CREDIT_DB_PATH = os.path.join(os.path.dirname(__file__), 'credit_entry.sqlite3')
+# Integrated Database Path
+INTEGRATED_DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'database', 'credit-entry.db')
+MARAKI_DB_PATH = INTEGRATED_DB_PATH
+CREDIT_DB_PATH = INTEGRATED_DB_PATH
 
 class DatabaseViewer:
     def __init__(self, parent, db_path, name):

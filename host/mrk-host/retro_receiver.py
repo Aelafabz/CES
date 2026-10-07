@@ -7,7 +7,7 @@ import retro_db_builder
 app = Flask(__name__)
 UPLOAD_FOLDER = 'retro_received_packages'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-DB_PATH = 'maraki-db.db'
+DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'database', 'credit-entry.db')
 
 @app.route('/db_status', methods=['GET'])
 def db_status():

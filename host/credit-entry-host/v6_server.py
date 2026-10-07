@@ -21,8 +21,9 @@ from v6_common import BANKS, CASHIERS, TARGET_SMS_SENDERS, normalize_cashier, pa
 
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(APP_DIR, '..', '..'))
 DATA_DIR = os.environ.get("CRED_V6_DATA", os.path.join(APP_DIR, "server_data"))
-DB_PATH = os.path.join(DATA_DIR, "cred_entry_v6.db")
+DB_PATH = os.path.join(PROJECT_ROOT, "database", "credit-entry.db")
 CONFIG_PATH = os.path.join(DATA_DIR, "server_config.json")
 XML_DIR = os.path.join(DATA_DIR, "received_xmls")
 HOST = os.environ.get("CRED_V6_HOST", "0.0.0.0")

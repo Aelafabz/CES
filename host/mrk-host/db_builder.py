@@ -36,8 +36,9 @@ def import_csv_to_db(db_path, csv_path, table_name):
     conn.commit()
     conn.close()
 
-def build_database_from_folder(folder_path, db_name="mrk_database.db"):
-    db_path = os.path.join(folder_path, db_name)
+def build_database_from_folder(folder_path, db_path=None):
+    if db_path is None:
+        db_path = os.path.join(os.path.dirname(__file__), '..', '..', 'database', 'credit-entry.db')
     
     for filename in os.listdir(folder_path):
         if filename.endswith(".csv"):

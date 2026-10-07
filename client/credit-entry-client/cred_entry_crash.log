@@ -1,0 +1,29 @@
+
+Started 2026-10-07T08:44:05.496992
+Python: 3.14.7 (tags/v3.14.7:823f032, Aug  5 2026, 10:51:32) [MSC v.1944 64 bit (AMD64)]
+Executable: C:\Users\DELL 7020\Desktop\CES\venv\scripts\python.exe
+Windows: sys.getwindowsversion(major=10, minor=0, build=26200, platform=2, service_pack='')
+
+Traceback (most recent call last):
+  File "C:\Users\DELL 7020\Desktop\CES\client\credit-entry-client\credit-entry.py", line 1204, in <module>
+    App().mainloop()
+    ~~~~~~~~~~~~~~^^
+  File "C:\Users\DELL 7020\AppData\Local\Python\pythoncore-3.14-64\Lib\tkinter\__init__.py", line 1625, in mainloop
+    self.tk.mainloop(n)
+    ~~~~~~~~~~~~~~~~^^^
+KeyboardInterrupt
+
+Started 2026-10-07T08:52:29.091340
+Python: 3.14.7 (tags/v3.14.7:823f032, Aug  5 2026, 10:51:32) [MSC v.1944 64 bit (AMD64)]
+Executable: C:\Users\DELL 7020\Desktop\CES\venv\scripts\python.exe
+Windows: sys.getwindowsversion(major=10, minor=0, build=26200, platform=2, service_pack='')
+
+Started 2026-10-07T08:58:58.946317
+Python: 3.14.7 (tags/v3.14.7:823f032, Aug  5 2026, 10:51:32) [MSC v.1944 64 bit (AMD64)]
+Executable: C:\Users\DELL 7020\Desktop\CES\venv\scripts\python.exe
+Windows: sys.getwindowsversion(major=10, minor=0, build=26200, platform=2, service_pack='')
+
+Started 2026-10-07T09:00:44.545285
+Python: 3.14.7 (tags/v3.14.7:823f032, Aug  5 2026, 10:51:32) [MSC v.1944 64 bit (AMD64)]
+Executable: C:\Users\DELL 7020\Desktop\CES\venv\scripts\python.exe
+Windows: sys.getwindowsversion(major=10, minor=0, build=26200, platform=2, service_pack='')

@@ -29,7 +29,9 @@ A robust desktop application for logging and managing credit payments.
   - Contains server-side administration tools (currently in development).
 
 ### 3. SMS Relay (`sms-relay-client` & `sms-relay-host`)
-- Placeholder for future SMS integration for processing and relaying mobile payments.
+- The host relay polls an Android phone's inbox through ADB and forwards recognized mobile payments to the credit-entry server.
+- To exercise SMS parsing and posting without a connected phone or writing to the live server, run `python host/sms-relay-host/sms_adb_relay.py --test-fake`. The test sends generated messages to a temporary local receiver.
+- To continuously insert clearly labeled fake payments into the configured credit-entry server database, run `python host/sms-relay-host/sms_adb_relay.py --fake-stream`. It sends one fake payment every 5-10 seconds until stopped with Ctrl+C. These entries are test data and will appear in the credit-entry client.
 
 ## Setup & Requirements
 

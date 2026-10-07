@@ -33,7 +33,7 @@ def import_csv_to_db(db_path, csv_path, table_name):
     conn.commit()
     conn.close()
 
-def build_database_from_folder(folder_path, db_path="maraki-db.db"):
+def build_database_from_folder(folder_path, db_path=os.path.join(os.path.dirname(__file__), '..', '..', 'database', 'credit-entry.db')):
     for filename in os.listdir(folder_path):
         if filename.endswith(".csv"):
             table_name = "retro_sales" if "sales" in filename.lower() else "retro_erca" if "erca" in filename.lower() else "retro_data"
