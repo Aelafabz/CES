@@ -1,5 +1,10 @@
 # Deploying the CES client
 
+The client includes a scraping status agent and accepts manual scrape requests
+from the host switchboard. See [agent setup](SCRAPING_AGENT.md) for the control
+token, unique client identity, and background launcher. Opening Credit Entry
+through `start-client.cmd` starts the agent automatically.
+
 Copy this entire `client` folder to a writable location on each Windows client
 machine. The project root, `host` folder, root requirements, and root Python
 environment are not needed. Python 3.10 or newer with Tcl/Tk support must be

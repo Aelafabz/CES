@@ -14,8 +14,9 @@ class StandaloneClientTest(unittest.TestCase):
         self.addCleanup(self.temporary.cleanup)
         self.base = Path(self.temporary.name)
         self.client = self.base / "deployment" / "cashier"
-        shutil.copytree(Path(__file__).resolve().parent, self.client,
-                        ignore=shutil.ignore_patterns(".venv", "__pycache__", ".env", "*.log"))
+        source = Path(os.environ.get("CES_TEST_CLIENT_DIR", Path(__file__).resolve().parent))
+        shutil.copytree(source, self.client,
+                        ignore=shutil.ignore_patterns(".venv", "__pycache__", ".env", "*.log", "*.lock", "mrk-agent-data"))
         (self.client / ".env").write_text(
             "CRED_V6_SERVER_URL=http://configured-host:8765\n"
             "CRED_V6_CLIENT_TOKEN=test-token\n"

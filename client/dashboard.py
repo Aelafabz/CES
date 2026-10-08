@@ -111,7 +111,7 @@ class Pipeline:
             scraper.session = session
             scraper.username = os.environ.get("MRK_USERNAME")
             scraper.password = os.environ.get("MRK_PASSWORD")
-            scraper.base_url = os.environ.get("MRK_BASE_URL", "http://192.168.1.24/MarakiReports2012").rstrip("/")
+            scraper.base_url = os.environ.get("MRK_BASE_URL", "http://127.0.0.1/MarakiReports2012").rstrip("/")
             scraper.data_path = str(run_dir)
             scraper.sales_file = scraper.erca_file = None
             if source == "sample":

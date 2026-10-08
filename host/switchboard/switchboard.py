@@ -16,9 +16,10 @@ import sys
 import threading
 import time
 import tkinter as tk
-from datetime import datetime
+from datetime import date, datetime
 from tkinter import messagebox, ttk
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 HOST_DIR = os.path.abspath(os.path.join(HERE, ".."))
@@ -35,6 +36,26 @@ os.makedirs(LOG_DIR, exist_ok=True)
 
 POLL_SECONDS = 3
 STARTUP_GRACE = 10  # seconds a freshly started process may take to answer
+CLIENT_CONTROL_URL = "http://127.0.0.1:%s" % os.environ.get("MRK_RECEIVER_PORT", "8000")
+SCRAPE_BUSY = {"starting", "scraping", "timestamps", "organizing", "packaging", "uploading", "awaiting_import"}
+
+
+def client_control_request(path, data=None):
+    token = os.environ.get("MRK_CONTROL_ADMIN_TOKEN", "")
+    if not token:
+        raise RuntimeError("Start the updated MRK Receiver, then reopen the switchboard to load its admin control token.")
+    payload = json.dumps(data).encode("utf-8") if data is not None else None
+    req = Request(CLIENT_CONTROL_URL + path, data=payload,
+                  headers={"X-MRK-Token": token, "Content-Type": "application/json"})
+    try:
+        with urlopen(req, timeout=3) as response:
+            return json.load(response)
+    except HTTPError as exc:
+        try:
+            message = json.loads(exc.read()).get("error", "Receiver rejected request")
+        except ValueError:
+            message = "Update/restart the MRK Receiver to enable client status"
+        raise RuntimeError(message) from None
 
 # ---------------------------------------------------------------------------
 # Managed processes. Edit here to add/remove/re-port anything.
@@ -223,13 +244,17 @@ class Switchboard(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("CES Host Switchboard")
-        self.geometry("1100x760")
+        self.geometry("1180x900")
         self.managed = [Managed(spec) for spec in PROCESSES]
         self.results = queue.Queue()
         self.stop_flag = threading.Event()
         self.baseline = {}       # table -> count when the switchboard opened
         self.last_stats = None
         self.rows = {}
+        self.clients = {}
+        self.client_actions = queue.Queue()
+        self.client_request_pending = False
+        self.client_control_error = ""
         self.build()
         threading.Thread(target=self.poller, daemon=True).start()
         self.protocol("WM_DELETE_WINDOW", self.on_close)
@@ -271,7 +296,7 @@ class Switchboard(tk.Tk):
             ttk.Button(btns, text="Restart", width=8, command=lambda x=m: self.restart(x)).pack(side="left", padx=2)
             self.rows[m.spec["key"]] = {"lamp": lamp, "dot": dot, "status": status, "info": info}
 
-        flow = ttk.LabelFrame(outer, text="Data flow (shared database, read-only view)", padding=8)
+        flow = ttk.LabelFrame(outer, text="Data flow (Maraki + credit-entry databases, read-only view)", padding=8)
         flow.pack(fill="x")
         self.flow_tree = ttk.Treeview(flow, columns=("table", "rows", "new", "last"), show="headings", height=len(WATCHED))
         for col, label, width, anchor in (("table", "Table", 190, "w"), ("rows", "Rows", 100, "e"),
@@ -284,6 +309,40 @@ class Switchboard(tk.Tk):
 
         tabs = ttk.Notebook(outer)
         tabs.pack(fill="both", expand=True, pady=(8, 0))
+
+        clients = ttk.Frame(tabs, padding=8)
+        tabs.add(clients, text="Client scraping")
+        self.client_note = ttk.Label(clients, text="Waiting for client heartbeats…")
+        self.client_note.pack(anchor="w", pady=(0, 6))
+        controls = ttk.Frame(clients)
+        controls.pack(fill="x", pady=(0, 8))
+        today = datetime.now().date().isoformat()
+        self.scrape_start = tk.StringVar(value=today)
+        self.scrape_end = tk.StringVar(value=today)
+        ttk.Label(controls, text="Start date:").pack(side="left")
+        ttk.Entry(controls, textvariable=self.scrape_start, width=12).pack(side="left", padx=(4, 12))
+        ttk.Label(controls, text="End date:").pack(side="left")
+        ttk.Entry(controls, textvariable=self.scrape_end, width=12).pack(side="left", padx=(4, 12))
+        self.scrape_button = ttk.Button(controls, text="Scrape selected client", command=self.request_client_scrape, state="disabled")
+        self.scrape_button.pack(side="left")
+        ttk.Label(controls, text="YYYY-MM-DD  ·  heartbeat every 10s; offline after 45s").pack(side="left", padx=12)
+        grid = ttk.Frame(clients)
+        grid.pack(fill="both", expand=True)
+        self.client_tree = ttk.Treeview(grid, columns=("name", "ip", "signal", "stage", "import", "range", "seen"), show="headings", selectmode="browse")
+        for key, label, width in (("name", "Client", 190), ("ip", "IP", 115), ("signal", "Signal", 85),
+                                  ("stage", "Scrape status", 140), ("import", "Host import", 100),
+                                  ("range", "Report dates", 215), ("seen", "Last heartbeat", 130)):
+            self.client_tree.heading(key, text=label)
+            self.client_tree.column(key, width=width)
+        for tag, color in (("offline", "#6b7280"), ("ready", "#16753b"), ("active", "#ac6b00"), ("failed", "#b42318")):
+            self.client_tree.tag_configure(tag, foreground=color)
+        self.client_tree.pack(side="left", fill="both", expand=True)
+        client_scroll = ttk.Scrollbar(grid, orient="vertical", command=self.client_tree.yview)
+        client_scroll.pack(side="right", fill="y")
+        self.client_tree.configure(yscrollcommand=client_scroll.set)
+        self.client_tree.bind("<<TreeviewSelect>>", lambda event: self.update_client_selection())
+        self.client_detail = ttk.Label(clients, text="Select a client to see its latest signal.", wraplength=1100)
+        self.client_detail.pack(anchor="w", pady=(8, 0))
 
         act = ttk.Frame(tabs)
         tabs.add(act, text="Activity (audit log)")
@@ -313,6 +372,75 @@ class Switchboard(tk.Tk):
         self.footer.pack(anchor="w", pady=(6, 0))
 
     # ----- controls ------------------------------------------------------
+    def update_client_selection(self):
+        selected = self.client_tree.selection()
+        client = self.clients.get(selected[0]) if selected else None
+        enabled = bool(client and client.get("online") and client["phase"] not in SCRAPE_BUSY
+                       and not client.get("is_host")
+                       and not client.get("command_status") and not self.client_request_pending
+                       and not self.client_control_error)
+        self.scrape_button.config(state="normal" if enabled else "disabled")
+        if client:
+            self.client_detail.config(text="%s  ·  %s  ·  %s%s%s" % (
+                client["name"], client["id"], client.get("message", ""),
+                "  ·  Import error: " + client["import_error"] if client.get("import_error") else "",
+                "  ·  Agent is on the host PC; start it on the intended client PC." if client.get("is_host") else
+                "  ·  Report source: " + client.get("report_url", "Not reported")))
+
+    def request_client_scrape(self):
+        selected = self.client_tree.selection()
+        if not selected or self.client_request_pending:
+            return
+        identifier = selected[0]
+        start, end = self.scrape_start.get().strip(), self.scrape_end.get().strip()
+        try:
+            if date.fromisoformat(end) < date.fromisoformat(start):
+                raise ValueError("End date must be on or after start date")
+        except ValueError as exc:
+            messagebox.showerror("Invalid report dates", str(exc))
+            return
+        self.client_request_pending = True
+        self.update_client_selection()
+        self.client_note.config(text="Sending scrape request…")
+        def request_scrape():
+            try:
+                result = client_control_request("/api/clients/%s/scrape" % identifier,
+                                                {"start_date": start, "end_date": end})
+                self.client_actions.put((identifier, result, None))
+            except Exception as exc:
+                self.client_actions.put((identifier, None, str(exc)))
+        threading.Thread(target=request_scrape, daemon=True).start()
+
+    def render_clients(self, clients, error):
+        self.client_control_error = error
+        if not error:
+            self.clients = {client["id"]: client for client in clients}
+        else:
+            for client in self.clients.values():
+                client["online"] = False
+        for identifier in self.client_tree.get_children():
+            if identifier not in self.clients:
+                self.client_tree.delete(identifier)
+        for identifier, client in self.clients.items():
+            online = client.get("online", False)
+            phase = client["phase"]
+            stage = "Queued" if client.get("command_status") in ("queued", "dispatched") else phase.replace("_", " ").title()
+            tag = "offline" if not online else "failed" if phase == "failed" or client.get("import_status") == "failed" else "active" if phase in SCRAPE_BUSY or client.get("command_status") else "ready"
+            dates = "%s → %s" % (client.get("start_date", ""), client.get("end_date", "")) if client.get("start_date") else "—"
+            seen = datetime.fromisoformat(client["last_seen"]).astimezone().strftime("%H:%M:%S")
+            values = (client["name"], client["ip"], "Host PC" if client.get("is_host") else "● Online" if online else "● Offline", stage,
+                      client.get("import_status", "").title() or "—", dates, seen)
+            if self.client_tree.exists(identifier):
+                self.client_tree.item(identifier, values=values, tags=(tag,))
+            else:
+                self.client_tree.insert("", "end", iid=identifier, values=values, tags=(tag,))
+        remote = [client for client in self.clients.values() if not client.get("is_host")]
+        count = sum(client.get("online", False) for client in remote)
+        note = "%s of %s clients online. Select an idle client to request a scrape." % (count, len(remote)) if remote else "No remote clients registered. Run start-scraping-agent.cmd on each client PC with the host address and client token in its .env."
+        self.client_note.config(text=error or note,
+                                foreground="#b42318" if error else "#374151")
+        self.update_client_selection()
+
     def start(self, m):
         try:
             m.start()
@@ -367,13 +495,18 @@ class Switchboard(tk.Tk):
     def poller(self):
         while not self.stop_flag.is_set():
             health = {m.spec["key"]: probe(m.spec) for m in self.managed}
-            self.results.put((health, read_db_stats()))
+            try:
+                clients = client_control_request("/api/clients")["clients"]
+                client_error = ""
+            except Exception as exc:
+                clients, client_error = [], "Client status unavailable: " + str(exc)
+            self.results.put((health, read_db_stats(), clients, client_error))
             self.stop_flag.wait(POLL_SECONDS)
 
     def tick(self):
         try:
             while True:
-                health, stats = self.results.get_nowait()
+                health, stats, clients, client_error = self.results.get_nowait()
                 for m in self.managed:
                     result = health.get(m.spec["key"])
                     if m.alive:
@@ -384,6 +517,20 @@ class Switchboard(tk.Tk):
                         m.external = bool(result) and m.spec["port"] is not None
                 self.last_stats = stats
                 self.render_flow(stats)
+                self.render_clients(clients, client_error)
+        except queue.Empty:
+            pass
+        try:
+            while True:
+                identifier, result, error = self.client_actions.get_nowait()
+                self.client_request_pending = False
+                if error:
+                    messagebox.showerror("Cannot request scrape", error)
+                else:
+                    if identifier in self.clients:
+                        self.clients[identifier]["command_status"] = "queued"
+                    self.client_note.config(text="Scrape queued; the client will pick it up on its next poll.")
+                self.update_client_selection()
         except queue.Empty:
             pass
         self.render()

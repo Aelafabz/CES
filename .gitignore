@@ -11,3 +11,9 @@ host/credit-entry-host/server_data/server_config.json
 host/mrk-host/received_packages/
 host/mrk-host/package_session_state.json
 host/mrk-host/package_session_state.json.lock
+host/mrk-host/client_control.sqlite*
+client-agent-update/mrk-agent-data/
+client/mrk-agent-data/
+host/switchboard/logs/*-split.*.log
+/client-agent-backups/
+host/switchboard/logs/*-control.*.log

@@ -49,6 +49,29 @@ configuration, and data migration. No project-root files or host code are needed
 
 ## Host and Client Environment
 
+### Per-client scraping status and manual requests
+
+The MRK Receiver provides authenticated client heartbeats and durable manual scrape
+commands. The switchboard's **Client scraping** tab shows each client's connectivity,
+current stage, report dates, last heartbeat, and host database import result. Select
+an online idle client, enter the date range, and click **Scrape selected client**.
+Busy clients and duplicate requests are blocked.
+
+Deploy the files in `client-agent-update` into each independent client folder.
+See [client scraping-agent setup](client-agent-update/SCRAPING_AGENT.md).
+The receiver creates `MRK_CONTROL_CLIENT_TOKEN` and `MRK_CONTROL_ADMIN_TOKEN` in
+`host/.env` when absent. Copy only the client token to each client's `.env`.
+Reopen the switchboard after token creation. Its admin token stays on the host.
+Control tracking lives in `host/mrk-host/client_control.sqlite`, separate from the
+Maraki and credit-entry databases. Clients poll/heartbeat every 10 seconds and are
+marked offline after 45 seconds without a signal. No inbound client port is needed.
+
+The client launcher starts the agent alongside Credit Entry; `start-scraping-agent.cmd`
+can also run it independently. Launcher scrapes emit stage changes and durable local
+signals. Upload accepted is distinct from host import complete. Client identity,
+progress, and logs remain inside the client folder, and the agent reconnects
+automatically. Interrupted runs are reported as failures rather than silently replayed.
+
 Host data is split into `database/marak.db` for Maraki report tables and
 `database/credit_entry.db` for credit entries, SMS payments, XML records, and audit
 events. Configure these through `MRK_DATABASE_PATH` and `CRED_V6_DATABASE_PATH`
