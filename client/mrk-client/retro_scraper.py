@@ -9,15 +9,15 @@ from page_scraper import PageScraper
 from data_organizer import DataOrganizer
 import zipfile
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT))
+CLIENT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(CLIENT_ROOT))
 from env_config import get_path, load_env_file
 
-load_env_file(PROJECT_ROOT / "client" / ".env")
+load_env_file(CLIENT_ROOT / ".env")
 
 STATE_FILE = get_path(
-    "MRK_RETRO_STATE_FILE", "C:/Client-data/mrk-data/retro_state.json", PROJECT_ROOT)
-RETRO_DATA_DIR = get_path("MRK_RETRO_DATA_DIR", "C:/Client-data/mrk-data", PROJECT_ROOT)
+    "MRK_RETRO_STATE_FILE", "C:/Client-data/mrk-data/retro_state.json", CLIENT_ROOT)
+RETRO_DATA_DIR = get_path("MRK_RETRO_DATA_DIR", "C:/Client-data/mrk-data", CLIENT_ROOT)
 RETRO_HOST = os.environ.get("MRK_RETRO_RECEIVER_HOST", "192.168.1.2")
 RETRO_PORT = os.environ.get("MRK_RETRO_RECEIVER_PORT", "8001")
 HOST_STATUS_URL = f"http://{RETRO_HOST}:{RETRO_PORT}/db_status"
@@ -75,7 +75,7 @@ def run_retro_pipeline():
         source_ip = "127.0.0.1"
         
     folder_name = f"retro_{target_year}_{source_ip}_maraki-scraped"
-    zip_filename = f"{folder_name}.zip"
+    zip_filename = str(Path(scraper.data_path) / f"{folder_name}.zip")
     
     with zipfile.ZipFile(zip_filename, 'w') as zipf:
         if sales_csv and os.path.exists(sales_csv):
@@ -87,7 +87,7 @@ def run_retro_pipeline():
     print(f"Uploading {zip_filename} to host...")
     try:
         with open(zip_filename, 'rb') as f:
-            files = {'file': (zip_filename, f)}
+            files = {'file': (Path(zip_filename).name, f)}
             response = requests.post(HOST_UPLOAD_URL, files=files)
             if response.status_code == 200:
                 print(f"Successfully sent retro package for {target_year}.")

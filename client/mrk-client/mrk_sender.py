@@ -5,11 +5,11 @@ import socket
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT))
+CLIENT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(CLIENT_ROOT))
 from env_config import load_env_file
 
-load_env_file(PROJECT_ROOT / "client" / ".env")
+load_env_file(CLIENT_ROOT / ".env")
 
 class MRKSender:
     def __init__(self, sales_csv, erca_csv, start_date, end_date):
@@ -30,7 +30,10 @@ class MRKSender:
 
     def package_wrapper(self):
         folder_name = f"{self.start_date} - {self.end_date} {self.source_ip} maraki-scraped"
-        zip_filename = f"{folder_name}.zip"
+        data_file = self.sales_csv or self.erca_csv
+        if not data_file:
+            raise ValueError("No report files to package.")
+        zip_filename = str(Path(data_file).resolve().parent / f"{folder_name}.zip")
         
         with zipfile.ZipFile(zip_filename, 'w') as zipf:
             if self.sales_csv and os.path.exists(self.sales_csv):
@@ -45,7 +48,7 @@ class MRKSender:
         url = f"http://{self.receiver_ip}:{self.receiver_port}/upload"
         try:
             with open(zip_file, 'rb') as f:
-                files = {'file': (zip_file, f)}
+                files = {'file': (Path(zip_file).name, f)}
                 response = requests.post(url, files=files)
                 if response.status_code == 200:
                     print("Successfully sent package to receiver.")

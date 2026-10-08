@@ -1,0 +1,4 @@
+ * Serving Flask app 'mrk_receiver'
+ * Debug mode: off
+Imported 2026-10-01_2026-10-07_erca.csv into table erca
+Imported 2026-10-01_2026-10-07_sales.csv into table sales

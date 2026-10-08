@@ -36,10 +36,76 @@ A robust desktop application for logging and managing credit payments.
 
 ## Setup & Requirements
 
+For temporary scraping tests and database inspection, run
+`tools\scraping-dashboard\start-dashboard.cmd` and open `http://127.0.0.1:8790`.
+See [dashboard instructions](tools/scraping-dashboard/README.md).
+
+The `client` folder can be deployed independently to client machines. See
+[client deployment instructions](client/README.md) for local setup, launchers,
+configuration, and data migration. No project-root files or host code are needed.
+
 - Python 3.x
 - Dependencies: `requests`, `beautifulsoup4`, `Flask`, `openpyxl`, `werkzeug`
 
 ## Host and Client Environment
+
+### Per-client scraping status and manual requests
+
+The MRK Receiver provides authenticated client heartbeats and durable manual scrape
+commands. The switchboard's **Client scraping** tab shows each client's connectivity,
+current stage, report dates, last heartbeat, and host database import result. Select
+an online idle client, enter the date range, and click **Scrape selected client**.
+Busy clients and duplicate requests are blocked.
+
+Deploy the files in `client-agent-update` into each independent client folder.
+See [client scraping-agent setup](client-agent-update/SCRAPING_AGENT.md).
+The receiver creates `MRK_CONTROL_CLIENT_TOKEN` and `MRK_CONTROL_ADMIN_TOKEN` in
+`host/.env` when absent. Copy only the client token to each client's `.env`.
+Reopen the switchboard after token creation. Its admin token stays on the host.
+Control tracking lives in `host/mrk-host/client_control.sqlite`, separate from the
+Maraki and credit-entry databases. Clients poll/heartbeat every 10 seconds and are
+marked offline after 45 seconds without a signal. No inbound client port is needed.
+
+The client launcher starts the agent alongside Credit Entry; `start-scraping-agent.cmd`
+can also run it independently. Launcher scrapes emit stage changes and durable local
+signals. Upload accepted is distinct from host import complete. Client identity,
+progress, and logs remain inside the client folder, and the agent reconnects
+automatically. Interrupted runs are reported as failures rather than silently replayed.
+
+Host data is split into `database/marak.db` for Maraki report tables and
+`database/credit_entry.db` for credit entries, SMS payments, XML records, and audit
+events. Configure these through `MRK_DATABASE_PATH` and `CRED_V6_DATABASE_PATH`
+in `host/.env`. The old `CES_DATABASE_PATH` setting is no longer used.
+The switchboard monitors both databases; the scraping dashboard inspects Maraki.
+
+To migrate a legacy shared database, stop its writers and run
+`python tools/split_database.py --apply-config`. The migration makes a full SQLite
+backup in `database/backups`, preserves table schemas and identifiers, checks row
+counts and database integrity, and refuses to overwrite existing destination files.
+Restart the host services after migration.
+
+The Maraki receiver automatically checks `MRK_UPLOAD_DIR` (default
+`host/mrk-host/received_packages`) every 10 seconds and runs the database builder
+for new or changed ZIP packages. This also handles packages copied into the folder
+manually. Upload responses acknowledge receipt; database import runs asynchronously.
+Packages must be unchanged across two scans before importing, so detection and
+import normally take up to 20 seconds. Invalid packages and failed database imports
+are retried each scan, with the error recorded in the session state.
+
+Tracking is saved atomically to `host/mrk-host/package_session_state.json`, including
+the last scan, file size/modification time, import status, attempts, SHA-256, and
+import timestamps. Successful unchanged packages are skipped across restarts.
+New sessions also process ZIPs already in the folder. Imports use `MRK_DATABASE_PATH`
+and deduplicate existing rows. Existing extracted folders are ignored; each ZIP is
+extracted privately for import. All tables in a package must import successfully
+before the package is marked complete.
+
+The watcher starts with the MRK Receiver in the switchboard. To watch independently
+of the HTTP receiver, run `python host/mrk-host/db_builder.py` (or
+`python host/mrk-host/package_watcher.py`). A file lock prevents the standalone
+watcher and receiver from scanning concurrently. Change `MRK_PACKAGE_STATE_FILE`
+or `MRK_PACKAGE_SCAN_INTERVAL_SECONDS` in `host/.env` if needed. Restart the receiver
+after updating its code to enable its built-in watcher.
 
 Runtime paths, service addresses/ports, relay settings, and credentials are read from separate `host/.env` and `client/.env` files. Create them from `host/.env.example` and `client/.env.example`; both actual `.env` files are ignored by Git. The loader uses only Python's standard library. Values provided by the operating system override `.env` values.
 

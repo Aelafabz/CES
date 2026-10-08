@@ -29,7 +29,7 @@ HOST_ENV_PATH = os.path.join(PROJECT_ROOT, "host", ".env")
 load_env_file(HOST_ENV_PATH)
 DATA_DIR = os.environ.get("CRED_V6_DATA") or str(
     get_path("CRED_V6_DATA_DIR", os.path.join("host", "credit-entry-host", "server_data"), PROJECT_ROOT))
-DB_PATH = str(get_path("CES_DATABASE_PATH", os.path.join("database", "credit-entry.db"), PROJECT_ROOT))
+DB_PATH = str(get_path("CRED_V6_DATABASE_PATH", os.path.join("database", "credit_entry.db"), PROJECT_ROOT))
 CONFIG_PATH = os.path.join(DATA_DIR, "server_config.json")
 XML_DIR = os.path.join(DATA_DIR, "received_xmls")
 HOST = os.environ.get("CRED_V6_HOST", "0.0.0.0")
@@ -54,7 +54,7 @@ class ApiError(Exception):
 
 
 def ensure_dirs():
-    for path in (DATA_DIR, XML_DIR):
+    for path in (DATA_DIR, XML_DIR, os.path.dirname(DB_PATH)):
         if not os.path.isdir(path):
             os.makedirs(path)
 

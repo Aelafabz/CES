@@ -27,3 +27,43 @@ Started 2026-10-07T09:00:44.545285
 Python: 3.14.7 (tags/v3.14.7:823f032, Aug  5 2026, 10:51:32) [MSC v.1944 64 bit (AMD64)]
 Executable: C:\Users\DELL 7020\Desktop\CES\venv\scripts\python.exe
 Windows: sys.getwindowsversion(major=10, minor=0, build=26200, platform=2, service_pack='')
+
+Started 2026-10-07T10:33:47.213595
+Python: 3.14.0 (tags/v3.14.0:ebf955d, Oct  7 2025, 10:15:03) [MSC v.1944 64 bit (AMD64)]
+Executable: C:\CES\venv\scripts\python.exe
+Windows: sys.getwindowsversion(major=10, minor=0, build=26200, platform=2, service_pack='')
+
+Started 2026-10-07T10:37:27.274177
+Python: 3.14.0 (tags/v3.14.0:ebf955d, Oct  7 2025, 10:15:03) [MSC v.1944 64 bit (AMD64)]
+Executable: C:\CES\venv\scripts\python.exe
+Windows: sys.getwindowsversion(major=10, minor=0, build=26200, platform=2, service_pack='')
+
+Traceback (most recent call last):
+  File "C:\client\credit-entry-client\credit-entry.py", line 439, in <module>
+    from env_config import get_path, load_env_file
+ModuleNotFoundError: No module named 'env_config'
+
+Started 2026-10-07T10:39:03.395953
+Python: 3.14.0 (tags/v3.14.0:ebf955d, Oct  7 2025, 10:15:03) [MSC v.1944 64 bit (AMD64)]
+Executable: C:\CES\venv\scripts\python.exe
+Windows: sys.getwindowsversion(major=10, minor=0, build=26200, platform=2, service_pack='')
+
+Traceback (most recent call last):
+  File "C:\client\credit-entry-client\credit-entry.py", line 439, in <module>
+    from env_config import get_path, load_env_file
+ModuleNotFoundError: No module named 'env_config'
+
+Started 2026-10-07T10:39:21.386480
+Python: 3.14.0 (tags/v3.14.0:ebf955d, Oct  7 2025, 10:15:03) [MSC v.1944 64 bit (AMD64)]
+Executable: C:\CES\venv\scripts\python.exe
+Windows: sys.getwindowsversion(major=10, minor=0, build=26200, platform=2, service_pack='')
+
+Started 2026-10-07T10:58:08.800147
+Python: 3.14.0 (tags/v3.14.0:ebf955d, Oct  7 2025, 10:15:03) [MSC v.1944 64 bit (AMD64)]
+Executable: C:\client\.venv\Scripts\python.exe
+Windows: sys.getwindowsversion(major=10, minor=0, build=26200, platform=2, service_pack='')
+
+Started 2026-10-07T10:59:38.015994
+Python: 3.14.0 (tags/v3.14.0:ebf955d, Oct  7 2025, 10:15:03) [MSC v.1944 64 bit (AMD64)]
+Executable: C:\client\.venv\Scripts\python.exe
+Windows: sys.getwindowsversion(major=10, minor=0, build=26200, platform=2, service_pack='')

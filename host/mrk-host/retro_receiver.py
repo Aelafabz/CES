@@ -16,7 +16,7 @@ app = Flask(__name__)
 UPLOAD_FOLDER = str(get_path(
     "MRK_RETRO_UPLOAD_DIR", os.path.join("host", "mrk-host", "retro_received_packages"), PROJECT_ROOT))
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-DB_PATH = str(get_path("CES_DATABASE_PATH", os.path.join("database", "credit-entry.db"), PROJECT_ROOT))
+DB_PATH = str(get_path("MRK_DATABASE_PATH", os.path.join("database", "marak.db"), PROJECT_ROOT))
 
 @app.route('/db_status', methods=['GET'])
 def db_status():

@@ -7,3 +7,49 @@ WARNING: This is a development server. Do not use it in a production deployment.
  * Running on http://127.0.0.1:8000
  * Running on http://192.168.1.72:8000
 Press CTRL+C to quit
+
+=== Started 2026-10-07T10:34:51 ===
+ * Serving Flask app 'mrk_receiver'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8000
+ * Running on http://192.168.1.2:8000
+Press CTRL+C to quit
+=== Stopped 2026-10-07T10:35:42 ===
+
+=== Started 2026-10-07T12:30:36 ===
+ * Serving Flask app 'mrk_receiver'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8000
+ * Running on http://192.168.1.2:8000
+Press CTRL+C to quit
+Received and extracted 2026-10-01_-_2026-10-07_192.168.1.22_maraki-scraped.zip
+Imported 2026-10-01_2026-10-07_erca.csv into table erca
+Imported 2026-10-01_2026-10-07_sales.csv into table sales
+192.168.1.22 - - [07/Oct/2026 13:04:59] "POST /upload HTTP/1.1" 200 -
+=== Stopped 2026-10-07T13:26:06 ===
+
+=== Started 2026-10-07T13:26:07 ===
+2026-10-07 13:26:07,989 WARNING Another Maraki package watcher is already running
+ * Serving Flask app 'mrk_receiver'
+ * Debug mode: off
+2026-10-07 13:26:08,011 INFO [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8000
+ * Running on http://192.168.1.2:8000
+2026-10-07 13:26:08,012 INFO [33mPress CTRL+C to quit[0m
+=== Stopped 2026-10-07T13:26:16 ===
+
+=== Started 2026-10-07T13:26:18 ===
+2026-10-07 13:26:18,485 WARNING Another Maraki package watcher is already running
+ * Serving Flask app 'mrk_receiver'
+ * Debug mode: off
+2026-10-07 13:26:18,505 INFO [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8000
+ * Running on http://192.168.1.2:8000
+2026-10-07 13:26:18,505 INFO [33mPress CTRL+C to quit[0m
+=== Stopped 2026-10-07T13:37:25 ===
